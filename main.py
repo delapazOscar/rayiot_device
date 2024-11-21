@@ -58,6 +58,28 @@ user_id = None
 is_registering = False
 register_thread = None  # Hilo para el registro de asistencia
 
+def run_server():
+    """Función para ejecutar el servidor Flask."""
+    app.run(host="0.0.0.0", port=5000)
+
+def buzzer_success():
+    # Activar el buzzer con secuencia de tonos
+    pwm.start(50)  # Duty cycle 50%
+    pwm.ChangeFrequency(280)
+    sleep(0.2)
+    pwm.ChangeFrequency(360)
+    sleep(0.2)
+    pwm.stop()
+
+def buzzer_fail():
+    # Activar el buzzer con secuencia de tonos
+    pwm.start(50)  # Duty cycle 50%
+    pwm.ChangeFrequency(360)
+    sleep(0.2)
+    pwm.ChangeFrequency(280)
+    sleep(0.2)
+    pwm.stop()
+
 @app.route('/register_mode', methods=['POST'])
 def register_mode():
     """Endpoint para registrar un modo con user_id."""
@@ -83,59 +105,49 @@ def register_mode():
 
     return jsonify({"success": True, "message": "Id del usuario recibido"}), 200
 
-def run_server():
-    """Función para ejecutar el servidor Flask."""
-    app.run(host="0.0.0.0", port=5000)
-
-def buzzer_success():
-    # Activar el buzzer con secuencia de tonos
-    pwm.start(50)  # Duty cycle 50%
-    pwm.ChangeFrequency(280)
-    sleep(0.2)
-    pwm.ChangeFrequency(360)
-    sleep(0.2)
-    pwm.stop()
-
-def buzzer_fail():
-    # Activar el buzzer con secuencia de tonos
-    pwm.start(50)  # Duty cycle 50%
-    pwm.ChangeFrequency(360)
-    sleep(0.2)
-    pwm.ChangeFrequency(280)
-    sleep(0.2)
-    pwm.stop()
+@app.route('/attendance_mode', methods=['POST'])
+def attendance_mode():
+    print('Modo asistencia')
+    set_led_color(BLUE)
+    while True:
+        register_attendance_mode()
 
 def register_attendance_mode():
     try:
-        while True:
-            set_led_color(BLUE)
-            print("Escanéa un tarjeta NFC")
+        set_led_color(BLUE)
+        print("Escanéa un tarjeta NFC")
 
-            # Leer tarjeta RFID
-            id, text = reader.read()
+        # Leer tarjeta RFID
+        id, text = reader.read()
 
-            payload = {
-                'nfc_id': str(id)
-            }
-            try:
-                response = backend.make_request(
-                    method="register_assistence",
-                    payload=payload,
-                    res_model="ray.user.event"
-                )
+        payload = {
+            'nfc_id': str(id)
+        }
+        try:
+            response = backend.make_request(
+                method="register_assistence",
+                payload=payload,
+                res_model="ray.user.event"
+            )
 
+            if response and 'result' in response and 'success' in response['result']:
                 if response['result']['success']:
                     set_led_color(GREEN)
                     buzzer_success()
-
+                    print("Petición exitosa: Usuario registrado")
                 else:
                     set_led_color(RED)
                     buzzer_fail()
+                    print(f"Petición fallida: {response['result'].get('message', 'Error desconocido')}")
+            else:
+                set_led_color(RED)
+                buzzer_fail()
+                print("Respuesta inesperada del backend")
 
-                sleep(3)
+            sleep(3)
 
-            except Exception as e:
-                print(f"Ha ocurrido un error: {e}")
+        except Exception as e:
+            print(f"Ha ocurrido un error: {e}")
     except KeyboardInterrupt:
         # Limpieza de GPIO y apagado del LED
         print("Program interrupted")
@@ -183,6 +195,8 @@ def register_user_mode():
                 buzzer_fail()
                 print("Respuesta inesperada del backend")
 
+            time.sleep(3)
+
         except Exception as e:
             print(f"Ha ocurrido un error al enviar la petición: {e}")
     except KeyboardInterrupt:
@@ -200,6 +214,8 @@ if __name__ == "__main__":
     server_thread = threading.Thread(target=run_server)
     server_thread.daemon = True
     server_thread.start()
+
+    set_led_color(BLUE)
 
     try:
         print("Servidor Flask escuchando en http://0.0.0.0:5000/register_mode")
