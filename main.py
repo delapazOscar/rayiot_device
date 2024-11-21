@@ -177,7 +177,7 @@ def register_attendance_mode():
 
 
 def register_user_mode():
-    with nfc_look:
+    with nfc_lock:
         try:
             set_led_color(BLUE)  # Indica que está listo para leer
             print("Escanéa una tarjeta NFC")
