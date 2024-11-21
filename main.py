@@ -118,11 +118,8 @@ def register_mode():
 
 @app.route('/attendance_mode', methods=['POST'])
 def attendance_mode():
-    start_mode('attendance', loop_attendance)
-    return jsonify({"status": "Modo attendance iniciado"}), 200
-
-def loop_attendance():
-    while True:
+    start_mode('attendance', attendance_mode)
+    while not stop_event.is_set():
         register_attendance_mode()
 
 def register_attendance_mode():
