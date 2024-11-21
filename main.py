@@ -164,6 +164,8 @@ def register_attendance_mode():
                 print("Respuesta inesperada del backend")
 
             sleep(3)
+            # Limpiar buzzer
+            pwm.stop()
 
         except Exception as e:
             print(f"Ha ocurrido un error: {e}")
