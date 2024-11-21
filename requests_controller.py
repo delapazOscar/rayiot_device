@@ -6,18 +6,19 @@ class RequestsController:
         self.access_token = access_token
         self.account_id = account_id
 
-    def make_request(self, method=None, payload=None, res_id=1, res_model=None):
-        # Prepare the request payload
+    def make_request(self, method=None, payload=None, res_id=False, res_model=None):
         data = {
             "params": {
                 "res_model": res_model,
                 "access_token": self.access_token,
                 "account_id": self.account_id,
                 "res_method": method,
-                "res_id": res_id,
-                "res_params": payload
+                "res_params": payload,
             }
         }
+
+        if res_id:
+            data["params"]["res_id"] = res_id
 
         headers = {
             'Content-Type': 'application/json'
