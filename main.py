@@ -148,44 +148,46 @@ def register_attendance_mode():
 def register_user_mode():
     global is_registering
     try:
-        while is_registering:
-            set_led_color(BLUE)
-            print("Escanéa un tarjeta NFC")
+        set_led_color(BLUE)  # Indica que está listo para leer
+        print("Escanéa una tarjeta NFC")
 
-            # Leer tarjeta RFID
-            id, text = reader.read()
+        # Leer tarjeta NFC (espera a que se lea una)
+        id, text = reader.read()
+        print(f"Tarjeta leída: ID={id}, Texto={text}")  # Depuración
 
-            payload = {
-                'nfc_id': str(id)
-            }
-            try:
-                response = backend.make_request(
-                    method="set_nfc",
-                    payload=payload,
-                    res_model="ray.user",
-                    res_id=user_id
-                )
+        payload = {
+            'nfc_id': str(id)
+        }
 
-                if response['result']['success']:
-                    set_led_color(GREEN)
-                    buzzer_success()
+        # Intentar enviar la petición al backend
+        try:
+            response = backend.make_request(
+                method="set_nfc",
+                payload=payload,
+                res_model="ray.user",
+                res_id=user_id
+            )
 
-                else:
-                    set_led_color(RED)
-                    buzzer_fail()
-
-                sleep(3)
-
-            except Exception as e:
-                print(f"Ha ocurrido un error: {e}")
+            # Verificar la respuesta del backend
+            if response['result']['success']:
+                set_led_color(GREEN)
+                buzzer_success()
+                print("Petición exitosa: Usuario registrado")
+            else:
+                set_led_color(RED)
+                buzzer_fail()
+                print("Petición fallida: Usuario no registrado")
+        except Exception as e:
+            print(f"Ha ocurrido un error al enviar la petición: {e}")
     except KeyboardInterrupt:
-        # Limpieza de GPIO y apagado del LED
-        print("Program interrupted")
+        print("Lectura interrumpida por el usuario")
     finally:
-        # Detener el PWM y limpiar el GPIO
+        # Limpieza del GPIO y apagado del LED
+        is_registering = False
         pwm.stop()
         GPIO.cleanup()
         set_led_color(Color(0, 0, 0))  # Apagar el LED
+
 
 if __name__ == "__main__":
     # Iniciar el servidor Flask en un hilo separado
