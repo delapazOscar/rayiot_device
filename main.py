@@ -119,7 +119,11 @@ def register_mode():
 
 @app.route('/attendance_mode', methods=['POST'])
 def attendance_mode():
-    start_mode('attendance', attendance_mode)
+    start_mode('attendance', loop_attendance_mode)
+
+    return {'success': False, 'message': 'Correct'}
+
+def loop_attendance_mode():
     while not stop_event.is_set():
         register_attendance_mode()
 
