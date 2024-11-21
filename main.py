@@ -102,7 +102,7 @@ def buzzer_fail():
 @app.route('/register_mode', methods=['POST'])
 def register_mode():
     """Endpoint para registrar un modo con user_id."""
-    global user_id, is_registering, register_thread
+    global user_id
     data = request.json
 
     if 'user_id' not in data:
@@ -110,15 +110,8 @@ def register_mode():
 
     user_id = data['user_id']
     print(f"user_id recibido: {user_id}")
-    # Si ya hay un hilo ejecutándose, cancela y reinicia
-    if is_registering and register_thread is not None:
-        print("Deteniendo el hilo de registro previo...")
-        is_registering = False
-        print(is_registering)
-        register_thread.join()
 
-    # Inicia un nuevo hilo para el modo de registro de usuario
-    is_registering = True
+    # Si ya hay un hilo ejecutándose, cancela y reinicia
     register_thread = threading.Thread(target=register_user_mode)
     register_thread.start()
 
@@ -176,7 +169,6 @@ def register_attendance_mode():
         set_led_color(Color(0, 0, 0))  # Apagar el LED
 
 def register_user_mode():
-    global is_registering
     try:
         set_led_color(BLUE)  # Indica que está listo para leer
         print("Escanéa una tarjeta NFC")
@@ -221,7 +213,6 @@ def register_user_mode():
         print("Lectura interrumpida por el usuario")
     finally:
         # Limpieza del GPIO y apagado del LED
-        is_registering = False
         pwm.stop()
         GPIO.cleanup()
         set_led_color(Color(0, 0, 0))  # Apagar el LED
@@ -243,3 +234,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\nDeteniendo el servidor y limpiando recursos...")
         GPIO.cleanup()
+        pwm.stop()
+        set_led_color(Color(0,0,0))
