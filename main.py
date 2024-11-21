@@ -168,17 +168,12 @@ def register_attendance_mode():
             sleep(3)
             # Limpiar buzzer
             pwm.stop()
-
         except Exception as e:
             print(f"Ha ocurrido un error: {e}")
     except KeyboardInterrupt:
         # Limpieza de GPIO y apagado del LED
         print("Program interrupted")
-    finally:
-        # Detener el PWM y limpiar el GPIO
-        pwm.stop()
-        GPIO.cleanup()
-        set_led_color(Color(0, 0, 0))  # Apagar el LED
+
 
 def register_user_mode():
     try:
