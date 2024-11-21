@@ -116,17 +116,14 @@ def register_mode():
 
     user_id = data['user_id']
     print(f"user_id recibido: {user_id}")
-    reader.close()
 
     # Si ya hay un hilo ejecutándose, cancela y reinicia
-    register_thread = threading.Thread(target=register_user_mode)
-    register_thread.start()
+    start_mode('register', register_user_mode)
 
     return jsonify({"success": True, "message": "Id del usuario recibido"}), 200
 
 @app.route('/attendance_mode', methods=['POST'])
 def attendance_mode():
-    reader.close()
     start_mode('attendance', loop_attendance_mode)
 
     return {'success': False, 'message': 'Correct'}
