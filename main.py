@@ -58,7 +58,6 @@ user_id = None
 mode = None  # Indica el modo activo: 'register' o 'attendance'
 stop_event = threading.Event()  # Evento para detener hilos activos
 current_thread = None
-nfc_lock = threading.Lock()
 def start_mode(new_mode, target_function):
     """
     Cambia el modo activo y lanza un nuevo hilo para ejecutar la función especificada.
@@ -117,6 +116,7 @@ def register_mode():
 
     user_id = data['user_id']
     print(f"user_id recibido: {user_id}")
+    reader.close()
 
     # Si ya hay un hilo ejecutándose, cancela y reinicia
     register_thread = threading.Thread(target=register_user_mode)
@@ -126,6 +126,7 @@ def register_mode():
 
 @app.route('/attendance_mode', methods=['POST'])
 def attendance_mode():
+    reader.close()
     start_mode('attendance', loop_attendance_mode)
 
     return {'success': False, 'message': 'Correct'}
@@ -177,49 +178,48 @@ def register_attendance_mode():
 
 
 def register_user_mode():
-    with nfc_lock:
+    try:
+        set_led_color(BLUE)  # Indica que está listo para leer
+        print("Escanéa una tarjeta NFC")
+
+        # Leer tarjeta NFC (espera a que se lea una)
+        id, text = reader.read()
+        print(f"Tarjeta leída: ID={id}, Texto={text}")  # Depuración
+
+        payload = {
+            'nfc_id': str(id)
+        }
+
+        # Intentar enviar la petición al backend
         try:
-            set_led_color(BLUE)  # Indica que está listo para leer
-            print("Escanéa una tarjeta NFC")
+            response = backend.make_request(
+                method="set_nfc",
+                payload=payload,
+                res_model="ray.user",
+                res_id=user_id
+            )
 
-            # Leer tarjeta NFC (espera a que se lea una)
-            id, text = reader.read()
-            print(f"Tarjeta leída: ID={id}, Texto={text}")  # Depuración
-
-            payload = {
-                'nfc_id': str(id)
-            }
-
-            # Intentar enviar la petición al backend
-            try:
-                response = backend.make_request(
-                    method="set_nfc",
-                    payload=payload,
-                    res_model="ray.user",
-                    res_id=user_id
-                )
-
-                # Verificar la estructura de la respuesta
-                if response and 'result' in response and 'success' in response['result']:
-                    if response['result']['success']:
-                        set_led_color(GREEN)
-                        buzzer_success()
-                        print("Petición exitosa: Usuario registrado")
-                    else:
-                        set_led_color(RED)
-                        buzzer_fail()
-                        print(f"Petición fallida: {response['result'].get('message', 'Error desconocido')}")
+            # Verificar la estructura de la respuesta
+            if response and 'result' in response and 'success' in response['result']:
+                if response['result']['success']:
+                    set_led_color(GREEN)
+                    buzzer_success()
+                    print("Petición exitosa: Usuario registrado")
                 else:
                     set_led_color(RED)
                     buzzer_fail()
-                    print("Respuesta inesperada del backend")
+                    print(f"Petición fallida: {response['result'].get('message', 'Error desconocido')}")
+            else:
+                set_led_color(RED)
+                buzzer_fail()
+                print("Respuesta inesperada del backend")
 
-                time.sleep(3)
+            time.sleep(3)
 
-            except Exception as e:
-                print(f"Ha ocurrido un error al enviar la petición: {e}")
-        except KeyboardInterrupt:
-            print("Lectura interrumpida por el usuario")
+        except Exception as e:
+            print(f"Ha ocurrido un error al enviar la petición: {e}")
+    except KeyboardInterrupt:
+        print("Lectura interrumpida por el usuario")
 
 
 
