@@ -168,15 +168,21 @@ def register_user_mode():
                 res_id=user_id
             )
 
-            # Verificar la respuesta del backend
-            if response['result']['success']:
-                set_led_color(GREEN)
-                buzzer_success()
-                print("Petición exitosa: Usuario registrado")
+            # Verificar la estructura de la respuesta
+            if response and 'result' in response and 'success' in response['result']:
+                if response['result']['success']:
+                    set_led_color(GREEN)
+                    buzzer_success()
+                    print("Petición exitosa: Usuario registrado")
+                else:
+                    set_led_color(RED)
+                    buzzer_fail()
+                    print(f"Petición fallida: {response['result'].get('message', 'Error desconocido')}")
             else:
                 set_led_color(RED)
                 buzzer_fail()
-                print("Petición fallida: Usuario no registrado")
+                print("Respuesta inesperada del backend")
+
         except Exception as e:
             print(f"Ha ocurrido un error al enviar la petición: {e}")
     except KeyboardInterrupt:
