@@ -76,6 +76,7 @@ def start_mode(new_mode, target_function):
     current_thread.start()
     print(f"Modo {new_mode} iniciado.")
 
+
 def run_server():
     """Función para ejecutar el servidor Flask."""
     app.run(host="0.0.0.0", port=5000)
@@ -101,7 +102,7 @@ def buzzer_fail():
 @app.route('/register_mode', methods=['POST'])
 def register_mode():
     """Endpoint para registrar un modo con user_id."""
-    global user_id
+    global user_id, is_registering, register_thread
     data = request.json
 
     if 'user_id' not in data:
@@ -109,7 +110,17 @@ def register_mode():
 
     user_id = data['user_id']
     print(f"user_id recibido: {user_id}")
-    start_mode('register', register_user_mode)
+    # Si ya hay un hilo ejecutándose, cancela y reinicia
+    if is_registering and register_thread is not None:
+        print("Deteniendo el hilo de registro previo...")
+        is_registering = False
+        print(is_registering)
+        register_thread.join()
+
+    # Inicia un nuevo hilo para el modo de registro de usuario
+    is_registering = True
+    register_thread = threading.Thread(target=register_user_mode)
+    register_thread.start()
 
     return jsonify({"success": True, "message": "Id del usuario recibido"}), 200
 
@@ -127,21 +138,29 @@ def register_attendance_mode():
         # Leer tarjeta RFID
         id, text = reader.read()
 
+        payload = {
+            'nfc_id': str(id)
+        }
         try:
             response = backend.make_request(
                 method="register_assistence",
-                payload={'nfc_id': str(id)},
+                payload=payload,
                 res_model="ray.user.event"
             )
 
-            if response.get('result', {}).get('success', False):
-                set_led_color(GREEN)
-                buzzer_success()
-                print("Asistencia registrada exitosamente.")
+            if response and 'result' in response and 'success' in response['result']:
+                if response['result']['success']:
+                    set_led_color(GREEN)
+                    buzzer_success()
+                    print("Petición exitosa: Usuario registrado")
+                else:
+                    set_led_color(RED)
+                    buzzer_fail()
+                    print(f"Petición fallida: {response['result'].get('message', 'Error desconocido')}")
             else:
                 set_led_color(RED)
                 buzzer_fail()
-                print("Error al registrar asistencia.")
+                print("Respuesta inesperada del backend")
 
             sleep(3)
 
@@ -157,38 +176,55 @@ def register_attendance_mode():
         set_led_color(Color(0, 0, 0))  # Apagar el LED
 
 def register_user_mode():
-    global stop_event
-    print("Entrando en modo de registro de usuario.")
-    set_led_color(BLUE)  # LED azul para indicar registro
+    global is_registering
     try:
-        while not stop_event.is_set():  # Continuar hasta que se detenga
-            print("Escaneando tarjeta NFC para registro...")
-            id, text = reader.read()
-            print(f"Tarjeta leída: ID={id}, Texto={text}")
+        set_led_color(BLUE)  # Indica que está listo para leer
+        print("Escanéa una tarjeta NFC")
 
-            # Simular petición al backend
+        # Leer tarjeta NFC (espera a que se lea una)
+        id, text = reader.read()
+        print(f"Tarjeta leída: ID={id}, Texto={text}")  # Depuración
+
+        payload = {
+            'nfc_id': str(id)
+        }
+
+        # Intentar enviar la petición al backend
+        try:
             response = backend.make_request(
                 method="set_nfc",
-                payload={'nfc_id': str(id)},
+                payload=payload,
                 res_model="ray.user",
                 res_id=user_id
             )
 
-            if response.get('result', {}).get('success', False):
-                set_led_color(GREEN)
-                buzzer_success()
-                print("Registro exitoso.")
+            # Verificar la estructura de la respuesta
+            if response and 'result' in response and 'success' in response['result']:
+                if response['result']['success']:
+                    set_led_color(GREEN)
+                    buzzer_success()
+                    print("Petición exitosa: Usuario registrado")
+                else:
+                    set_led_color(RED)
+                    buzzer_fail()
+                    print(f"Petición fallida: {response['result'].get('message', 'Error desconocido')}")
             else:
                 set_led_color(RED)
                 buzzer_fail()
-                print("Error en el registro.")
-            sleep(3)  # Pausa entre escaneos
+                print("Respuesta inesperada del backend")
 
-    except Exception as e:
-        print(f"Error en modo de registro: {e}")
+            time.sleep(3)
+
+        except Exception as e:
+            print(f"Ha ocurrido un error al enviar la petición: {e}")
+    except KeyboardInterrupt:
+        print("Lectura interrumpida por el usuario")
     finally:
-        print("Saliendo del modo de registro.")
-        set_led_color(Color(0, 0, 0))
+        # Limpieza del GPIO y apagado del LED
+        is_registering = False
+        pwm.stop()
+        GPIO.cleanup()
+        set_led_color(Color(0, 0, 0))  # Apagar el LED
 
 
 if __name__ == "__main__":
@@ -207,5 +243,3 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\nDeteniendo el servidor y limpiando recursos...")
         GPIO.cleanup()
-        pwm.stop()
-        set_led_color(Color(0, 0, 0))
