@@ -73,6 +73,7 @@ def register_mode():
     if is_registering and register_thread is not None:
         print("Deteniendo el hilo de registro previo...")
         is_registering = False
+        print(is_registering)
         register_thread.join()
 
     # Inicia un nuevo hilo para el modo de registro de usuario
