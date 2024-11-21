@@ -64,6 +64,10 @@ def start_mode(new_mode, target_function):
     """
     global mode, stop_event, current_thread
     # Detener el hilo actual si está en ejecución
+    if mode == new_mode:
+        print(f"Modo {new_mode} ya está activo.")
+        return
+
     if current_thread and current_thread.is_alive():
         print(f"Deteniendo modo actual: {mode}")
         stop_event.set()  # Solicita detener el hilo
