@@ -54,10 +54,14 @@ app = Flask(__name__)
 # Variable global para almacenar user_id al registrar usuario
 user_id = None
 
+# Variable global para controlar el estado del modo de registro
+is_registering = False
+register_thread = None  # Hilo para el registro de asistencia
+
 @app.route('/register_mode', methods=['POST'])
 def register_mode():
     """Endpoint para registrar un modo con user_id."""
-    global user_id
+    global user_id, is_registering, register_thread
     data = request.json
 
     if 'user_id' not in data:
@@ -65,12 +69,40 @@ def register_mode():
 
     user_id = data['user_id']
     print(f"user_id recibido: {user_id}")
+    # Si ya hay un hilo ejecutándose, cancela y reinicia
+    if is_registering and register_thread is not None:
+        print("Deteniendo el hilo de registro previo...")
+        is_registering = False
+        register_thread.join()
+
+    # Inicia un nuevo hilo para el modo de registro de usuario
+    is_registering = True
+    register_thread = threading.Thread(target=register_user_mode)
+    register_thread.start()
 
     return jsonify({"success": True, "message": "Id del usuario recibido"}), 200
 
 def run_server():
     """Función para ejecutar el servidor Flask."""
     app.run(host="0.0.0.0", port=5000)
+
+def buzzer_success():
+    # Activar el buzzer con secuencia de tonos
+    pwm.start(50)  # Duty cycle 50%
+    pwm.ChangeFrequency(280)
+    sleep(0.2)
+    pwm.ChangeFrequency(360)
+    sleep(0.2)
+    pwm.stop()
+
+def buzzer_fail():
+    # Activar el buzzer con secuencia de tonos
+    pwm.start(50)  # Duty cycle 50%
+    pwm.ChangeFrequency(360)
+    sleep(0.2)
+    pwm.ChangeFrequency(280)
+    sleep(0.2)
+    pwm.stop()
 
 def register_attendance_mode():
     try:
@@ -93,22 +125,53 @@ def register_attendance_mode():
 
                 if response['result']['success']:
                     set_led_color(GREEN)
-                    # Activar el buzzer con secuencia de tonos
-                    pwm.start(50)  # Duty cycle 50%
-                    pwm.ChangeFrequency(280)
-                    sleep(0.2)
-                    pwm.ChangeFrequency(360)
-                    sleep(0.2)
-                    pwm.stop()
+                    buzzer_success()
 
                 else:
                     set_led_color(RED)
-                    pwm.start(50)  # Duty cycle 50%
-                    pwm.ChangeFrequency(360)
-                    sleep(0.2)
-                    pwm.ChangeFrequency(280)
-                    sleep(0.2)
-                    pwm.stop()
+                    buzzer_fail()
+
+                sleep(3)
+
+            except Exception as e:
+                print(f"Ha ocurrido un error: {e}")
+    except KeyboardInterrupt:
+        # Limpieza de GPIO y apagado del LED
+        print("Program interrupted")
+    finally:
+        # Detener el PWM y limpiar el GPIO
+        pwm.stop()
+        GPIO.cleanup()
+        set_led_color(Color(0, 0, 0))  # Apagar el LED
+
+def register_user_mode():
+    global is_registering
+    try:
+        while is_registering:
+            set_led_color(BLUE)
+            print("Escanéa un tarjeta NFC")
+
+            # Leer tarjeta RFID
+            id, text = reader.read()
+
+            payload = {
+                'nfc_id': str(id)
+            }
+            try:
+                response = backend.make_request(
+                    method="set_nfc",
+                    payload=payload,
+                    res_model="ray.user",
+                    res_id=user_id
+                )
+
+                if response['result']['success']:
+                    set_led_color(GREEN)
+                    buzzer_success()
+
+                else:
+                    set_led_color(RED)
+                    buzzer_fail()
 
                 sleep(3)
 
@@ -129,6 +192,11 @@ if __name__ == "__main__":
     server_thread.daemon = True
     server_thread.start()
 
-    # Ejecutar el monitoreo del dispositivo en el hilo principal
-    print("Servidor Flask escuchando en http://0.0.0.0:5000/register_mode")
-    register_attendance_mode()
+    try:
+        print("Servidor Flask escuchando en http://0.0.0.0:5000/register_mode")
+        print("Esperando solicitudes para iniciar modos...")
+        while True:
+            time.sleep(1)  # Mantener el hilo principal activo sin consumir CPU innecesariamente
+    except KeyboardInterrupt:
+        print("\nDeteniendo el servidor y limpiando recursos...")
+        GPIO.cleanup()
