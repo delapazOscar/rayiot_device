@@ -58,20 +58,17 @@ user_id = None
 mode = None  # Indica el modo activo: 'register' o 'attendance'
 stop_event = threading.Event()  # Evento para detener hilos activos
 current_thread = None
-
 def start_mode(new_mode, target_function):
     """
     Cambia el modo activo y lanza un nuevo hilo para ejecutar la función especificada.
     """
     global mode, stop_event, current_thread
-
     # Detener el hilo actual si está en ejecución
     if current_thread and current_thread.is_alive():
         print(f"Deteniendo modo actual: {mode}")
         stop_event.set()  # Solicita detener el hilo
         current_thread.join()  # Espera a que termine
         print("Hilo anterior detenido.")
-
     # Cambiar el modo y reiniciar el evento
     mode = new_mode
     stop_event.clear()  # Reinicia el evento para el nuevo hilo
@@ -118,11 +115,8 @@ def register_mode():
 
 @app.route('/attendance_mode', methods=['POST'])
 def attendance_mode():
-    start_mode('attendance', loop_attendance)
-    return jsonify({"status": "Modo attendance iniciado"}), 200
-
-def loop_attendance():
-    while True:
+    start_mode('attendance', attendance_mode)
+    while not stop_event.is_set():
         register_attendance_mode()
 
 def register_attendance_mode():
