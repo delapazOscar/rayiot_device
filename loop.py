@@ -7,6 +7,7 @@ import sys
 import RPi.GPIO as GPIO
 from mfrc522 import SimpleMFRC522
 from rpi_ws281x import PixelStrip, Color
+import signal
 
 # Configuración del LED WS2812
 LED_COUNT = 3        # Número de LEDs en la tira
@@ -80,6 +81,19 @@ def buzzer_fail():
     pwm.ChangeFrequency(280)
     sleep(0.2)
     pwm.stop()
+
+# Variable global para controlar el ciclo principal
+running = True
+def signal_handler(sig, frame):
+    """Maneja la interrupción del usuario con Ctrl+C."""
+    global running
+    print("\nDeteniendo el servidor y limpiando recursos...")
+    running = False
+    GPIO.cleanup()  # Asegúrate de limpiar los pines GPIO
+    pwm.stop()      # Detén el PWM si lo estás usando
+    set_led_color(Color(0, 0, 0))  # Apaga el LED
+    sleep(1)  # Da tiempo para que otros procesos se limpien
+    exit(0)
 
 @app.route('/register_mode', methods=['POST'])
 def register_mode():
@@ -183,6 +197,8 @@ def register_user_mode():
 
     except KeyboardInterrupt:
         print("Lectura interrumpida por el usuario")
+
+signal.signal(signal.SIGINT, signal_handler)
 
 if __name__ == "__main__":
     # Iniciar el servidor Flask en un hilo separado
