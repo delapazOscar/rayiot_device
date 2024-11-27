@@ -219,3 +219,4 @@ if __name__ == "__main__":
             GPIO.cleanup()
             pwm.stop()
             set_led_color(Color(0, 0, 0))
+            break
