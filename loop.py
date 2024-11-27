@@ -198,6 +198,8 @@ def register_user_mode():
     except KeyboardInterrupt:
         print("Lectura interrumpida por el usuario")
 
+signal.signal(signal.SIGINT, signal_handler)
+
 if __name__ == "__main__":
     # Iniciar el servidor Flask en un hilo separado
     server_thread = threading.Thread(target=run_server)
