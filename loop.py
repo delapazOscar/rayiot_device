@@ -211,6 +211,7 @@ if __name__ == "__main__":
         try:
             if mode == 'register':
                 register_user_mode()
+                mode = None
             elif mode == 'attendance':
                 register_attendance_mode()
 
