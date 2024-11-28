@@ -67,9 +67,9 @@ def buzzer_success():
     pwm.stop()
     pwm.start(50)  # Duty cycle 50%
     pwm.ChangeFrequency(280)
-    sleep(0.2)
+    time.sleep(0.2)
     pwm.ChangeFrequency(360)
-    sleep(0.2)
+    time.sleep(0.2)
     pwm.stop()
 
 def buzzer_fail():
@@ -77,9 +77,9 @@ def buzzer_fail():
     pwm.stop()
     pwm.start(50)  # Duty cycle 50%
     pwm.ChangeFrequency(360)
-    sleep(0.2)
+    time.sleep(0.2)
     pwm.ChangeFrequency(280)
-    sleep(0.2)
+    time.sleep(0.2)
     pwm.stop()
 
 # Variable global para controlar el ciclo principal
@@ -92,7 +92,7 @@ def signal_handler(sig, frame):
     GPIO.cleanup()  # Asegúrate de limpiar los pines GPIO
     pwm.stop()      # Detén el PWM si lo estás usando
     set_led_color(Color(0, 0, 0))  # Apaga el LED
-    sleep(1)  # Da tiempo para que otros procesos se limpien
+    time.sleep(1)  # Da tiempo para que otros procesos se limpien
     exit(0)
 
 @app.route('/register_mode', methods=['POST'])
@@ -117,7 +117,7 @@ def attendance_mode():
 
     mode = 'attendance'
 
-    return {'success': False, 'message': 'Correct'}
+    return {'success': True, 'message': 'Correct'}
 
 
 def register_attendance_mode():
@@ -149,7 +149,8 @@ def register_attendance_mode():
                     buzzer_fail()
                     print("Error al registrar asistencia.")
 
-                sleep(3)
+                GPIO.cleanup()
+                time.sleep(3)
             except Exception as e:
                 print(f"Ha ocurrido un error: {e}")
     except KeyboardInterrupt:
@@ -190,6 +191,7 @@ def register_user_mode():
                     buzzer_fail()
                     print("Error al registrar asistencia.")
 
+                GPIO.cleanup()
                 time.sleep(3)
 
             except Exception as e:
