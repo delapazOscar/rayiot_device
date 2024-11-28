@@ -84,6 +84,7 @@ def buzzer_fail():
 
 # Variable global para controlar el ciclo principal
 running = True
+
 def signal_handler(sig, frame):
     """Maneja la interrupción del usuario con Ctrl+C."""
     global running
@@ -216,6 +217,8 @@ if __name__ == "__main__":
                 mode = None
             elif mode == 'attendance':
                 register_attendance_mode()
+            else:
+                time.sleep(0.1)
 
         except KeyboardInterrupt:
             print("\nDeteniendo el servidor y limpiando recursos...")
