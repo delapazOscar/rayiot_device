@@ -67,9 +67,9 @@ def buzzer_success():
     pwm.stop()
     pwm.start(50)  # Duty cycle 50%
     pwm.ChangeFrequency(280)
-    time.sleep(0.2)
+    sleep(0.2)
     pwm.ChangeFrequency(360)
-    time.sleep(0.2)
+    sleep(0.2)
     pwm.stop()
 
 def buzzer_fail():
@@ -77,9 +77,9 @@ def buzzer_fail():
     pwm.stop()
     pwm.start(50)  # Duty cycle 50%
     pwm.ChangeFrequency(360)
-    time.sleep(0.2)
+    sleep(0.2)
     pwm.ChangeFrequency(280)
-    time.sleep(0.2)
+    sleep(0.2)
     pwm.stop()
 
 # Variable global para controlar el ciclo principal
@@ -93,7 +93,7 @@ def signal_handler(sig, frame):
     GPIO.cleanup()  # Asegúrate de limpiar los pines GPIO
     pwm.stop()      # Detén el PWM si lo estás usando
     set_led_color(Color(0, 0, 0))  # Apaga el LED
-    time.sleep(1)  # Da tiempo para que otros procesos se limpien
+    sleep(1)  # Da tiempo para que otros procesos se limpien
     exit(0)
 
 @app.route('/register_mode', methods=['POST'])
