@@ -64,23 +64,21 @@ def set_led_color(color):
 
 def buzzer_success():
     # Activar el buzzer con secuencia de tonos
-    pwm.stop()
     pwm.start(50)  # Duty cycle 50%
     pwm.ChangeFrequency(280)
     sleep(0.2)
     pwm.ChangeFrequency(360)
     sleep(0.2)
-    pwm.stop()
+    pwm.ChangeDutyCycle(0)
 
 def buzzer_fail():
     # Activar el buzzer con secuencia de tonos
-    pwm.stop()
     pwm.start(50)  # Duty cycle 50%
     pwm.ChangeFrequency(360)
     sleep(0.2)
     pwm.ChangeFrequency(280)
     sleep(0.2)
-    pwm.stop()
+    pwm.ChangeDutyCycle(0)
 
 # Variable global para controlar el ciclo principal
 running = True
