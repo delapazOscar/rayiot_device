@@ -148,7 +148,7 @@ def register_attendance_mode():
                     buzzer_fail()
                     print("Error al registrar asistencia.")
 
-                GPIO.cleanup()
+                # GPIO.cleanup()
                 time.sleep(3)
             except Exception as e:
                 print(f"Ha ocurrido un error: {e}")
@@ -190,7 +190,7 @@ def register_user_mode():
                     buzzer_fail()
                     print("Error al registrar asistencia.")
 
-                GPIO.cleanup()
+                # GPIO.cleanup()
                 time.sleep(3)
 
             except Exception as e:
